@@ -1,0 +1,3 @@
+ctrl + shift + P
+Type "Lean 4: Docs: Show Documentation Resources
+Scroll to "Mathematics in Lean" and click "READ NOW ->"
