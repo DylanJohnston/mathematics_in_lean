@@ -143,7 +143,7 @@ example : |a*b| ≤ (a^2 + b^2)/2 := by
       _ ≥ 0 := by apply pow_two_nonneg
   apply abs_le'.mpr
   constructor
-  · linarith
-  · linarith
+  · linarith [h1]
+  · linarith [h2]
 
 #check abs_le'.mpr
