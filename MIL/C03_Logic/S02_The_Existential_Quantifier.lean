@@ -52,10 +52,21 @@ example (ubf : FnHasUb f) (ubg : FnHasUb g) : FnHasUb fun x ↦ f x + g x := by
   apply fnUb_add ubfa ubgb
 
 example (lbf : FnHasLb f) (lbg : FnHasLb g) : FnHasLb fun x ↦ f x + g x := by
-  sorry
+  rcases lbf with ⟨a,lbfa⟩
+  rcases lbg with ⟨b,lbgb⟩
+  use a + b
+  intro x
+  change a + b ≤ f x + g x
+  apply add_le_add
+  apply lbfa
+  apply lbgb
 
 example {c : ℝ} (ubf : FnHasUb f) (h : c ≥ 0) : FnHasUb fun x ↦ c * f x := by
-  sorry
+  rcases ubf with ⟨a, ubfa⟩
+  use c * a
+  intro x
+  change c * f x ≤ c * a
+  apply mul_le_mul_of_nonneg_left (ubfa x) h
 
 example : FnHasUb f → FnHasUb g → FnHasUb fun x ↦ f x + g x := by
   rintro ⟨a, ubfa⟩ ⟨b, ubgb⟩
@@ -129,8 +140,10 @@ example (divab : a ∣ b) (divbc : b ∣ c) : a ∣ c := by
   use d * e; ring
 
 example (divab : a ∣ b) (divac : a ∣ c) : a ∣ b + c := by
-  sorry
-
+  rcases divab with ⟨d,rfl⟩
+  rcases divac with ⟨e,rfl⟩
+  use d + e
+  ring
 end
 
 section
@@ -140,17 +153,21 @@ open Function
 example {c : ℝ} : Surjective fun x ↦ x + c := by
   intro x
   use x - c
-  dsimp; ring
+  dsimp; ring -- note: dsimp is not necessary, ring can unpack.
+
+#check mul_div_cancel₀
 
 example {c : ℝ} (h : c ≠ 0) : Surjective fun x ↦ c * x := by
-  sorry
+  intro x
+  use x / c
+  apply mul_div_cancel₀ _ h
 
 example (x y : ℝ) (h : x - y ≠ 0) : (x ^ 2 - y ^ 2) / (x - y) = x + y := by
   field_simp [h]
   ring
 
 example {f : ℝ → ℝ} (h : Surjective f) : ∃ x, f x ^ 2 = 4 := by
-  rcases h 2 with ⟨x, hx⟩
+  rcases h 2 with ⟨x, hx⟩ -- h 2 says "∃ x such that f x = 2". rcases unpacks this
   use x
   rw [hx]
   norm_num
@@ -163,6 +180,10 @@ variable {α : Type*} {β : Type*} {γ : Type*}
 variable {g : β → γ} {f : α → β}
 
 example (surjg : Surjective g) (surjf : Surjective f) : Surjective fun x ↦ g (f x) := by
-  sorry
-
+  intro z
+  rcases surjg z with ⟨y, gy_eq_z⟩
+  rcases surjf y with ⟨x, fx_eq_y⟩
+  use x
+  change g (f x)= z --need to use change as rw doesn't unpack automatically
+  rw [fx_eq_y, gy_eq_z]
 end
