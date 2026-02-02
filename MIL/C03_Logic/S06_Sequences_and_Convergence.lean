@@ -26,6 +26,9 @@ theorem convergesTo_const (a : ℝ) : ConvergesTo (fun x : ℕ ↦ a) a := by
   rw [sub_self, abs_zero]
   apply εpos
 
+#check le_of_max_le_left
+#check le_of_max_le_right
+
 theorem convergesTo_add {s t : ℕ → ℝ} {a b : ℝ}
       (cs : ConvergesTo s a) (ct : ConvergesTo t b) :
     ConvergesTo (fun n ↦ s n + t n) (a + b) := by
@@ -35,7 +38,20 @@ theorem convergesTo_add {s t : ℕ → ℝ} {a b : ℝ}
   rcases cs (ε / 2) ε2pos with ⟨Ns, hs⟩
   rcases ct (ε / 2) ε2pos with ⟨Nt, ht⟩
   use max Ns Nt
-  sorry
+  intro n n_ge_max
+  calc
+    |s n + t n - (a + b)|= |(s n - a) + (t n - b)| := by congr; ring
+    _ ≤ |(s n - a)| + |(t n - b)| := by apply abs_add
+    _ < ε/2 + ε/2 := by
+      apply add_lt_add
+      apply hs n
+      apply le_of_max_le_left n_ge_max
+      apply ht n
+      apply le_of_max_le_right n_ge_max
+    _ = ε := by norm_num
+
+-- def ConvergesTo (s : ℕ → ℝ) (a : ℝ) :=
+--   ∀ ε > 0, ∃ N, ∀ n ≥ N, |s n - a| < ε
 
 theorem convergesTo_mul_const {s : ℕ → ℝ} {a : ℝ} (c : ℝ) (cs : ConvergesTo s a) :
     ConvergesTo (fun n ↦ c * s n) (c * a) := by
@@ -46,7 +62,17 @@ theorem convergesTo_mul_const {s : ℕ → ℝ} {a : ℝ} (c : ℝ) (cs : Conver
     rw [h]
     ring
   have acpos : 0 < |c| := abs_pos.mpr h
-  sorry
+  intro e epos
+  have e_dvd_c_pos : 0 < e / |c| := by apply div_pos epos acpos
+  rcases cs (e/|c|) e_dvd_c_pos with ⟨N, s_conv⟩
+  use N
+  intro n n_ge_N
+  simp
+  calc
+  |c * s n - c * a| = |c * (s n - a)| := by congr; ring
+  _ = |c| * |(s n - a)| := by apply abs_mul
+  _ < |c| * (e / |c|) := by apply mul_lt_mul' le_rfl (s_conv n n_ge_N) (abs_nonneg _) acpos
+  _ = e := by field_simp
 
 theorem exists_abs_le_of_convergesTo {s : ℕ → ℝ} {a : ℝ} (cs : ConvergesTo s a) :
     ∃ N b, ∀ n, N ≤ n → |s n| < b := by
@@ -100,4 +126,3 @@ def ConvergesTo' (s : α → ℝ) (a : ℝ) :=
   ∀ ε > 0, ∃ N, ∀ n ≥ N, |s n - a| < ε
 
 end
-
