@@ -44,7 +44,17 @@ example : s ∩ (t ∪ u) ⊆ s ∩ t ∪ s ∩ u := by
   · right; exact ⟨xs, xu⟩
 
 example : s ∩ t ∪ s ∩ u ⊆ s ∩ (t ∪ u) := by
-  sorry
+  rintro x (⟨xs,xt⟩ | ⟨xs,xu⟩)
+  · constructor
+    apply xs
+    left; apply xt
+  · constructor
+    apply xs
+    right; apply xu
+
+#check Set.diff_eq
+#check Set.mem_diff
+
 example : (s \ t) \ u ⊆ s \ (t ∪ u) := by
   intro x xstu
   have xs : x ∈ s := xstu.1.1
@@ -64,7 +74,14 @@ example : (s \ t) \ u ⊆ s \ (t ∪ u) := by
   rintro (xt | xu) <;> contradiction
 
 example : s \ (t ∪ u) ⊆ (s \ t) \ u := by
-  sorry
+  intro x ⟨xs,hntu⟩
+  constructor
+  constructor
+  apply xs
+  contrapose! hntu; left; apply hntu
+  contrapose! hntu; right; apply hntu
+
+
 example : s ∩ t = t ∩ s := by
   ext x
   simp only [mem_inter_iff]
@@ -83,18 +100,65 @@ example : s ∩ t = t ∩ s := by
   · rintro x ⟨xt, xs⟩; exact ⟨xs, xt⟩
 
 example : s ∩ t = t ∩ s :=
-    Subset.antisymm sorry sorry
+    Subset.antisymm (fun _ ⟨xs, xt⟩ ↦ ⟨xt,xs⟩) (fun _ ⟨xt, xs⟩ ↦ ⟨xs,xt⟩)
+--struggling with this notation. I don't find it very intuitive at all...
+
 example : s ∩ (s ∪ t) = s := by
-  sorry
+  ext x
+  simp only [mem_inter_iff, mem_union]
+  constructor
+  rintro ⟨xs,xst⟩ --no need to break up xst := x ∈ s ∨ x ∈ t using xs|xt
+  apply xs
+  intro xs
+  use xs
+  apply Or.inl xs --this is essentially the same as left; apply xs. inl means inject into the left
 
 example : s ∪ s ∩ t = s := by
-  sorry
+  ext x
+  constructor
+  rintro (xs | xsandt)
+  exact xs
+  exact xsandt.1
+  intro xs
+  left; apply xs
 
 example : s \ t ∪ t = s ∪ t := by
-  sorry
+  apply Subset.antisymm
+  show s \ t ∪ t ⊆ s ∪ t
+  rintro x (⟨xs,xnt⟩ | xt)
+  left; apply xs
+  right; apply xt
+  show s ∪ t ⊆ s \ t ∪ t
+  rintro x (xs|xt)
+  have : x ∈ t ∨ x ∉ t := by apply em
+  rcases this with xt | nxt
+  right; apply xt
+  left; exact ⟨xs,nxt⟩
+  right; apply xt
 
 example : s \ t ∪ t \ s = (s ∪ t) \ (s ∩ t) := by
-  sorry
+  ext x
+  constructor --
+  rintro (⟨xs,xnt⟩ | ⟨xt,xns⟩)
+  constructor
+  left; apply xs
+  intro xnsnt
+  apply xnt
+  rcases xnsnt with ⟨xs,xt⟩
+  contradiction
+  constructor
+  right; apply xt
+  contrapose! xns
+  apply xns.1
+  rintro ⟨(xs|xt),xnst⟩
+  left
+  constructor
+  apply xs
+  contrapose! xnst; exact ⟨xs,xnst⟩
+  right
+  constructor
+  apply xt
+  contrapose! xnst; exact ⟨xnst,xt⟩
 
 def evens : Set ℕ :=
   { n | Even n }
@@ -235,4 +299,3 @@ example : ⋂₀ s = ⋂ t ∈ s, t := by
   rfl
 
 end
-
