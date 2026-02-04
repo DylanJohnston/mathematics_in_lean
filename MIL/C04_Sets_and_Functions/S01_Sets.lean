@@ -178,8 +178,20 @@ example (x : ℕ) (h : x ∈ (∅ : Set ℕ)) : False :=
 example (x : ℕ) : x ∈ (univ : Set ℕ) :=
   trivial
 
+#check Nat.Prime.eq_two_or_odd
+#check Nat.odd_iff
+
 example : { n | Nat.Prime n } ∩ { n | n > 2 } ⊆ { n | ¬Even n } := by
-  sorry
+  intro n
+  simp [Nat.odd_iff]
+  intro np n_gt_2
+  convert Nat.Prime.eq_two_or_odd np
+  constructor
+  intro n_odd; right; apply n_odd
+  rintro (n_eq_2 | n_odd)
+  rw [n_eq_2] at n_gt_2
+  contradiction
+  apply n_odd
 
 #print Prime
 
@@ -215,10 +227,15 @@ section
 variable (ssubt : s ⊆ t)
 
 example (h₀ : ∀ x ∈ t, ¬Even x) (h₁ : ∀ x ∈ t, Prime x) : ∀ x ∈ s, ¬Even x ∧ Prime x := by
-  sorry
+  intro x xs
+  constructor
+  apply h₀ x (ssubt xs)
+  apply h₁ x (ssubt xs)
 
 example (h : ∃ x ∈ s, ¬Even x ∧ Prime x) : ∃ x ∈ t, Prime x := by
-  sorry
+  rcases h with ⟨x,xs,a_not_even,a_prime⟩
+  use x
+  exact ⟨ssubt xs,a_prime⟩
 
 end
 
@@ -228,6 +245,8 @@ section
 variable {α I : Type*}
 variable (A B : I → Set α)
 variable (s : Set α)
+
+#check Set α
 
 open Set
 
@@ -257,7 +276,25 @@ example : (⋂ i, A i ∩ B i) = (⋂ i, A i) ∩ ⋂ i, B i := by
 
 
 example : (s ∪ ⋂ i, A i) = ⋂ i, A i ∪ s := by
-  sorry
+  ext x
+  simp [mem_union, mem_iInter]
+  constructor
+  show (x ∈ s ∨ ∀ (i : I), x ∈ A i) → ∀ (i : I), x ∈ A i ∨ x ∈ s
+  rintro (xs | hxai)
+  intro i
+  right; exact xs
+  intro i
+  left
+  apply hxai i
+  show (∀ (i : I), x ∈ A i ∨ x ∈ s) → x ∈ s ∨ ∀ (i : I), x ∈ A i
+  intro hxai_or_s
+  rcases em (x ∈ s) with xs | nxs
+  left; exact xs
+  right
+  intro i
+  rcases hxai_or_s i with xai | xs
+  apply xai
+  contradiction
 
 def primes : Set ℕ :=
   { x | Nat.Prime x }
@@ -277,8 +314,15 @@ example : (⋂ p ∈ primes, { x | ¬p ∣ x }) ⊆ { x | x = 1 } := by
   simp
   apply Nat.exists_prime_and_dvd
 
+#check Nat.exists_infinite_primes
+
 example : (⋃ p ∈ primes, { x | x ≤ p }) = univ := by
-  sorry
+  apply eq_univ_of_forall
+  simp
+  intro x
+  rcases Nat.exists_infinite_primes x with ⟨p,p_ge_x,p_prime⟩
+  use p
+  exact ⟨p_prime,p_ge_x⟩
 
 end
 
