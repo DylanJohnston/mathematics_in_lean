@@ -42,21 +42,31 @@ theorem exists_prime_factor {n : Nat} (h : 2 ≤ n) : ∃ p : Nat, p.Prime ∧ p
     use p, pp
     apply pdvd.trans mdvdn
 
+#check Nat.factorial_pos
+#check Nat.dvd_factorial
+#check Nat.dvd_sub'
+
 theorem primes_infinite : ∀ n, ∃ p > n, Nat.Prime p := by
   intro n
   have : 2 ≤ Nat.factorial n + 1 := by
-    sorry
+    simp
+    apply Nat.succ_le_of_lt (Nat.factorial_pos n)
   rcases exists_prime_factor this with ⟨p, pp, pdvd⟩
   refine ⟨p, ?_, pp⟩
   show p > n
   by_contra ple
   push_neg at ple
   have : p ∣ Nat.factorial n := by
-    sorry
+    apply Nat.dvd_factorial (Nat.Prime.pos pp) ple
   have : p ∣ 1 := by
-    sorry
+    convert Nat.dvd_sub pdvd this; simp
   show False
-  sorry
+  rw [Nat.prime_def_lt] at pp
+  rcases pp with ⟨p_ge_2,idc⟩
+  rw [Nat.dvd_one] at this
+  linarith
+
+
 open Finset
 
 section
@@ -89,11 +99,19 @@ section
 variable {α : Type*} [DecidableEq α] (r s t : Finset α)
 
 example : (r ∪ s) ∩ (r ∪ t) = r ∪ s ∩ t := by
-  sorry
+  ext x
+  simp
+  tauto
+
 example : (r \ s) \ t = r \ (s ∪ t) := by
-  sorry
+  ext x
+  simp
+  tauto
 
 end
+
+#check Finset.dvd_prod_of_mem
+#check Nat.Prime.eq_one_or_self_of_dvd
 
 example (s : Finset ℕ) (n : ℕ) (h : n ∈ s) : n ∣ ∏ i ∈ s, i :=
   Finset.dvd_prod_of_mem _ h
@@ -101,7 +119,13 @@ example (s : Finset ℕ) (n : ℕ) (h : n ∈ s) : n ∣ ∏ i ∈ s, i :=
 theorem _root_.Nat.Prime.eq_of_dvd_of_prime {p q : ℕ}
       (prime_p : Nat.Prime p) (prime_q : Nat.Prime q) (h : p ∣ q) :
     p = q := by
-  sorry
+  convert Nat.Prime.eq_one_or_self_of_dvd prime_q p h
+  constructor
+  intro p_eq_q; right; assumption
+  rintro (pe1|a)
+  have : p ≠ 1 := by apply Nat.Prime.ne_one prime_p
+  contradiction
+  exact a
 
 theorem mem_of_dvd_prod_primes {s : Finset ℕ} {p : ℕ} (prime_p : p.Prime) :
     (∀ n ∈ s, Nat.Prime n) → (p ∣ ∏ n ∈ s, n) → p ∈ s := by
@@ -111,7 +135,14 @@ theorem mem_of_dvd_prod_primes {s : Finset ℕ} {p : ℕ} (prime_p : p.Prime) :
     linarith [prime_p.two_le]
   simp [Finset.prod_insert ans, prime_p.dvd_mul] at h₀ h₁
   rw [mem_insert]
-  sorry
+  rcases h₁ with p_dvd_a | p_prod
+  left
+  have p_eq_a : p = a := by
+    apply _root_.Nat.Prime.eq_of_dvd_of_prime prime_p h₀.1 p_dvd_a
+  exact p_eq_a
+  right
+  exact ih h₀.2 p_prod
+
 example (s : Finset ℕ) (x : ℕ) : x ∈ s.filter Nat.Prime ↔ x ∈ s ∧ x.Prime :=
   mem_filter
 
@@ -224,4 +255,3 @@ theorem primes_mod_4_eq_3_infinite : ∀ n, ∃ p > n, Nat.Prime p ∧ p % 4 = 3
   have : p = 3 := by
     sorry
   contradiction
-
