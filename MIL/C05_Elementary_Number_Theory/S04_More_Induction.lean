@@ -112,7 +112,16 @@ theorem fib_add' : ∀ m n, fib (m + n + 1) = fib m * fib n + fib (m + 1) * fib 
     simp only [fib_add_two, Nat.succ_eq_add_one, this]
     ring
 
-example (n : ℕ): (fib n) ^ 2 + (fib (n + 1)) ^ 2 = fib (2 * n + 1) := by sorry
+example (n : ℕ): (fib n) ^ 2 + (fib (n + 1)) ^ 2 = fib (2 * n + 1) := by
+  induction' n with n ih
+  simp
+  have : 2 * (n+1) = (n+1) + (n+1) := by ring
+  rw [this]
+  simp [fib_add']
+  rw [add_assoc n 1 n, add_comm 1 n, ← add_assoc n n 1]
+  simp [fib_add'];
+  ring
+
 example (n : ℕ): (fib n) ^ 2 + (fib (n + 1)) ^ 2 = fib (2 * n + 1) := by
   rw [two_mul, fib_add, pow_two, pow_two]
 
@@ -142,4 +151,3 @@ theorem zero_lt_of_mul_eq_one (m n : ℕ) : n * m = 1 → 0 < n ∧ 0 < m := by
 example (m n : ℕ) : n*m = 1 → 0 < n ∧ 0 < m := by
   rcases m with (_ | m); simp
   rcases n with (_ | n) <;> simp
-
