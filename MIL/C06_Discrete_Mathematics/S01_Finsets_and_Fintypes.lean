@@ -100,6 +100,8 @@ example {α : Type*} [DecidableEq α] (f : α → ℕ)  (s : Finset α) (h : ∀
     intros x xs
     exact h x (mem_insert_of_mem xs)
 
+#check Classical.choose
+
 noncomputable example (s : Finset ℕ) (h : s.Nonempty) : ℕ := Classical.choose h
 
 example (s : Finset ℕ) (h : s.Nonempty) : Classical.choose h ∈ s := Classical.choose_spec h
@@ -148,4 +150,3 @@ variable (s : Finset ℕ)
 example : (↑s : Type) = {x : ℕ // x ∈ s} := rfl
 example : Fintype.card ↑s = s.card := by simp
 end
-
