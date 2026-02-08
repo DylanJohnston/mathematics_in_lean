@@ -90,18 +90,59 @@ example (n : ℕ) : #(triangle n) = (n + 1) * n / 2 := by
   apply Nat.eq_div_of_mul_eq_right (by norm_num)
   let turn (p : ℕ × ℕ) : ℕ × ℕ := (n - 1 - p.1, n - p.2)
   calc 2 * #(triangle n)
-      = #(triangle n) + #(triangle n) := by
-          sorry
+      = #(triangle n) + #(triangle n) := by omega
     _ = #(triangle n) + #(triangle n |>.image turn) := by
-          sorry
+          apply congr; rfl
+          symm
+          apply card_image_of_injOn
+          unfold turn triangle
+          intro ⟨x1,x2⟩ x_in_t ⟨y1,y2⟩ y_in_t
+          simp_all
+          omega
     _ = #(range n ×ˢ range (n + 1)) := by
+          rw [← card_union_of_disjoint]
+          simp only [triangle, turn]
           sorry
+          /- completely stuck on the above so read solutions.
+             Idea: start with congr to remove #, ext x, then
+             simp [triangle] and rcases and omega it.
+
+             I completely missed the idea to use congr -/
+          apply disjoint_iff_ne.mpr
+          intro ⟨x1,x2⟩ x_in_t ⟨y1,y2⟩ y_in_t
+          simp_all [triangle, turn]
+          rcases y_in_t with ⟨a,b,h⟩
+          omega
     _ = (n + 1) * n := by
-          sorry
+          simp; ring
 
 def triangle' (n : ℕ) : Finset (ℕ × ℕ) := {p ∈ range n ×ˢ range n | p.1 ≤ p.2}
 
-example (n : ℕ) : #(triangle' n) = #(triangle n) := by sorry
+example (n : ℕ) : #(triangle' n) = #(triangle n) := by
+  have this : (triangle n).image (fun (x,y) ↦ (x,y-1)) = (triangle' n) := by
+    sorry
+    /- I'll just assume this fact.
+       My initial thoughts are to use ext x, simp (with triangle), omega, etc
+       Solution confirms this is along the right lines -/
+  calc
+    #(triangle' n) = #((triangle n).image (fun (x,y) ↦ (x,y-1))) := by
+      congr
+      apply this.symm
+    _ = #(triangle n) := by
+      apply card_image_of_injOn
+      intro ⟨x1,x2⟩ x_in_t ⟨y1,y2⟩ y_in_t fx_fy
+      simp [triangle] at *
+      have y2_gt_0 : y2 > 0 := by
+        calc
+        0 ≤ y1 := by apply Nat.zero_le y1
+        _ < y2 := by apply y_in_t.2
+      have y2_ge_1 : y2 ≥ 1 := by exact y2_gt_0
+      have x2_gt_0 : x2 > 0 := by
+        calc
+        0 ≤ x1 := by apply Nat.zero_le x1
+        _ < x2 := by apply x_in_t.2
+      have x2_ge_1 : x2 ≥ 1 := by exact x2_gt_0
+      omega
 
 section
 open Classical
@@ -129,8 +170,32 @@ example {n : ℕ} (A : Finset ℕ)
     ∃ m ∈ A, ∃ k ∈ A, Nat.Coprime m k := by
   have : ∃ t ∈ range n, 1 < #({u ∈ A | u / 2 = t}) := by
     apply exists_lt_card_fiber_of_mul_lt_card_of_maps_to
-    · sorry
-    · sorry
+    · intro a a_in_A
+      have : a ∈ range (2 * n) := by
+        apply hA' a_in_A
+      simp at this; simp
+      omega
+    · simp_all
   rcases this with ⟨t, ht, ht'⟩
   simp only [one_lt_card, mem_filter] at ht'
-  sorry
+  rcases ht' with ⟨a, ⟨ha,ja⟩,b,⟨hb,jb⟩,anb⟩
+  use a
+  constructor; apply ha
+  use b
+  constructor; apply hb
+  have : a = b + 1 ∨ b = a + 1 := by omega
+  rcases this with h | h
+  <;>
+  simp [h, Nat.coprime_comm, Nat.coprime_add_iff_right]
+  /- Above three lines came from refactoring below after
+    noticing the logic was just repeated-/
+  -- rcases this with alb | bla
+  -- rw[alb]
+  -- rw [Nat.coprime_comm]
+  -- rw [Nat.coprime_add_iff_right]
+  -- simp
+  -- simp
+  -- rw[bla]
+  -- rw [Nat.coprime_add_iff_right]
+  -- simp
+  -- simp
