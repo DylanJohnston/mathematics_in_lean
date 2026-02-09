@@ -119,14 +119,29 @@ theorem size_le : ∀ t : BinTree, size t ≤ 2^depth t - 1
           have : 0 < 2 ^ max l.depth r.depth := by simp
           omega
 
-theorem depth_le_size : ∀ t : BinTree, depth t ≤ size t := by sorry
+theorem depth_le_size : ∀ t : BinTree, depth t ≤ size t := by
+  intro t
+  induction' t with l r l_dls r_dls
+  apply Nat.zero_le
+  simp [depth, size]
+  constructor
+  apply le_add_right l_dls
+  apply le_add_left r_dls
 
-def flip : BinTree → BinTree := sorry
+def flip : BinTree → BinTree
+  | empty => empty
+  | node l r => node (flip r) (flip l)
 
 example: flip  (node (node empty (node empty empty)) (node empty empty)) =
-    node (node empty empty) (node (node empty empty) empty) := sorry
+    node (node empty empty) (node (node empty empty) empty) := rfl
 
-theorem size_flip : ∀ t, size (flip t) = size t := by sorry
+theorem size_flip : ∀ t, size (flip t) = size t := by
+  intro t
+  induction' t with l r ihl ihr
+  rfl
+  simp [flip, size]
+  rw[ihl, ihr]; ring
+
 end BinTree
 
 inductive PropForm : Type where
@@ -174,9 +189,43 @@ def subst : PropForm → ℕ → PropForm → PropForm
   | impl A B, m, C => impl (A.subst m C) (B.subst m C)
 
 theorem subst_eq_of_not_mem_vars :
-    ∀ (A : PropForm) (n : ℕ) (C : PropForm), n ∉ A.vars → A.subst n C = A := sorry
+    ∀ (A : PropForm) (n : ℕ) (C : PropForm), n ∉ A.vars → A.subst n C = A := by
+    intro A n C
+    induction' A with x A B Aconjh Bconjh A B Adisjh Bdisjh A B Aimph Bimph
+    --case var (I am seeing how induction with ∣s is prehaps more organised since I want to label my cases anyway)
+    simp [vars, subst];
+    intro p q
+    push_neg at p; symm at p; contradiction
+    --case fls
+    simp [vars, subst]
+    --case conj
+    simp [vars, subst, Aconjh, Bconjh]
+    intro nnA nnB
+    exact ⟨(Aconjh nnA),Bconjh nnB⟩
+    --case disj
+    simp [vars, subst, Adisjh, Bdisjh]
+    intro nnA nnB
+    exact ⟨(Adisjh nnA),Bdisjh nnB⟩
+    --case imp
+    simp [vars, subst, Aimph, Bimph]
+    intro nnA nnB
+    exact ⟨(Aimph nnA),Bimph nnB⟩
 
 theorem subst_eval_eq : ∀ (A : PropForm) (n : ℕ) (C : PropForm) (v : ℕ → Bool),
-  (A.subst n C).eval v = A.eval (fun m => if m = n then C.eval v else v m) := sorry
+  (A.subst n C).eval v = A.eval (fun m => if m = n then C.eval v else v m)
+  | var A, n, C, v => by
+    simp [subst, eval]
+    by_cases h : A = n
+    simp [h]
+    simp [h]
+    rfl
+  | fls, n, C, v => by
+    simp [subst, eval]
+  | (impl A B), n, C, v => by
+    simp [subst, eval, subst_eval_eq]
+  | (disj A B), n, C, v => by
+    simp [subst, eval, subst_eval_eq]
+  | (conj A B), n, C, v => by
+    simp [subst, eval, subst_eval_eq]
 
 end PropForm
