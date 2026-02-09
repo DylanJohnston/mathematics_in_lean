@@ -19,6 +19,9 @@ def map {α β : Type*} (f : α → β) : List α → List β
   | a :: as => f a :: map f as
 
 #eval append [1, 2, 3] [4, 5, 6]
+/-  append 1 ::[2,3] [4,5,6] => 1 :: append([2,3] [4,5,6])
+    etc  until
+    1 :: 2 :: 3 :: [4,5,6]  -/
 #eval map (fun n => n^2) [1, 2, 3, 4, 5]
 
 theorem nil_append {α : Type*} (as : List α) : append [] as = as := rfl
@@ -61,12 +64,31 @@ theorem map_map' (f : α → β) (g : β → γ) (as : List α) :
   . rfl
   . simp [map, ih]
 
-def reverse : List α → List α := sorry
+def reverse : List α → List α
+  | [] => []
+  | a :: as => List.append (reverse as) (a::[])
+
+#eval reverse [1, 2, 3, 4, 5]
+
+#check cons_append
+#check append_assoc
 
 theorem reverse_append (as bs : List α) : reverse (as ++ bs) = reverse bs ++ reverse as := by
-  sorry
+  induction' as with a as ih
+  simp [append_nil]; rfl
+  simp [cons_append, reverse, ih]
 
-theorem reverse_reverse (as : List α) : reverse (reverse as) = as := by sorry
+theorem reverse_reverse (as : List α) : reverse (reverse as) = as := by
+  induction' as with a as ih
+  rfl
+  have h (l : List α) (x : α): reverse (l ++ [a]) = [a] ++ reverse l := by
+    induction' l with y l induct
+    rfl
+    simp [reverse]
+    rw[induct]; rfl
+  simp [reverse]
+  rw [h (reverse as) a]
+  rw [ih]; rfl
 
 end MyListSpace3
 
