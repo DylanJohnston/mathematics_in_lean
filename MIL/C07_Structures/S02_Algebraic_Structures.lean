@@ -1,5 +1,7 @@
 import MIL.Common
 import Mathlib.Data.Real.Basic
+import Mathlib.Algebra.Category.Grp.Basic
+import Mathlib.Algebra.Group.End --to see Group structure on Equiv.Perm α
 
 namespace C06S02
 
@@ -12,9 +14,14 @@ structure Group₁ (α : Type*) where
   one_mul : ∀ x : α, mul one x = x
   inv_mul_cancel : ∀ x : α, mul (inv x) x = one
 
+#check Group --Ctrl click for mathlib's defn of Group
+#print Group
+
 structure Grp₁ where
   α : Type*
   str : Group₁ α
+
+#check Grp --mathlibs defn of Grp (w/ carrier and structure bundled together)
 
 section
 variable (α β γ : Type*)
@@ -54,8 +61,14 @@ def permGroup {α : Type*} : Group₁ (Equiv.Perm α)
   inv_mul_cancel := Equiv.self_trans_symm
 
 structure AddGroup₁ (α : Type*) where
-  (add : α → α → α)
-  -- fill in the rest
+  add : α → α → α
+  zero : α
+  neg : α → α
+  add_assoc: ∀ x y z : α, add x (add y z) = add (add x y) z
+  add_zero: ∀ x, add x zero = x
+  zero_add: ∀ x, add zero x = x
+  neg_add_cancel: ∀ x, add (neg x) x = zero
+
 @[ext]
 structure Point where
   x : ℝ
@@ -67,11 +80,20 @@ namespace Point
 def add (a b : Point) : Point :=
   ⟨a.x + b.x, a.y + b.y, a.z + b.z⟩
 
-def neg (a : Point) : Point := sorry
+def neg (a : Point) : Point :=
+  ⟨-a.x, -a.y, -a.z⟩
 
-def zero : Point := sorry
+def zero : Point :=
+  ⟨0, 0, 0⟩
 
-def addGroupPoint : AddGroup₁ Point := sorry
+def addGroupPoint : AddGroup₁ Point where
+  add := add
+  zero := zero
+  neg := neg
+  add_assoc := by simp [add, @add_assoc ℝ] --using add_assoc of ℝ.
+  add_zero := by simp [add, zero]
+  zero_add := by simp [add,zero]
+  neg_add_cancel := by simp [add, neg, zero]
 
 end Point
 
