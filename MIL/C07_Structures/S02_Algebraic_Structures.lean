@@ -116,6 +116,18 @@ example {α : Type*} (f g : Equiv.Perm α) : g.symm.trans (g.trans f) = f :=
 
 end
 
+--check the same doesn't work for Point (yet?)
+
+section
+
+variable (p q : Point)
+
+--#check p + q
+/- Error:
+  failed to synthesize
+    HAdd Point Point ?m.9350 -/
+end
+
 class Group₂ (α : Type*) where
   mul : α → α → α
   one : α
@@ -192,4 +204,36 @@ end
 
 class AddGroup₂ (α : Type*) where
   add : α → α → α
-  -- fill in the rest
+  zero : α
+  neg : α → α
+  add_assoc: ∀ x y z : α, add x (add y z) = add (add x y) z
+  add_zero: ∀ x, add x zero = x
+  zero_add: ∀ x, add zero x = x
+  neg_add_cancel: ∀ x, add (neg x) x = zero
+
+--ensure AddGroup₂ is associated? to notation +,0,-
+instance {α : Type*} [AddGroup₂ α] : Add α :=
+  ⟨AddGroup₂.add⟩
+  instance {α : Type*} [AddGroup₂ α] : Zero α :=
+  ⟨AddGroup₂.zero⟩
+  instance {α : Type*} [AddGroup₂ α] : Neg α :=
+  ⟨AddGroup₂.neg⟩
+  instance {α : Type*} [AddGroup₂ α] : Sub α :=
+  ⟨fun p q => p + -q⟩
+
+instance : AddGroup₂ (Point) where
+  add := Point.add
+  zero := Point.zero
+  neg := Point.neg
+  add_assoc := by simp [Point.add, @add_assoc ℝ] --using add_assoc of ℝ.
+  add_zero := by simp [Point.add, Point.zero]
+  zero_add := by simp [Point.add,Point.zero]
+  neg_add_cancel := by simp [Point.add, Point.neg, Point.zero]
+
+section
+
+variable (p q : Point)
+#check p + q
+#check p - 0
+
+end
