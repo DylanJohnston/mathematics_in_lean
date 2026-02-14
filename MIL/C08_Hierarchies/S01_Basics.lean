@@ -327,7 +327,6 @@ instance abGrpModule (A : Type) [AddCommGroup₃ A] : Module₁ ℤ A where
 
 #synth Module₁ ℤ ℤ -- abGrpModule ℤ
 
-
 class AddMonoid₄ (M : Type) extends AddSemigroup₃ M, AddZeroClass M where
   /-- Multiplication by a natural number. -/
   nsmul : ℕ → M → M := nsmul₁
