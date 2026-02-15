@@ -86,13 +86,27 @@ def conjugate {G : Type*} [Group G] (x : G) (H : Subgroup G) : Subgroup G where
   carrier := {a : G | ∃ h, h ∈ H ∧ a = x * h * x⁻¹}
   one_mem' := by
     dsimp
-    sorry
+    use 1
+    constructor
+    apply H.one_mem'
+    group
   inv_mem' := by
     dsimp
-    sorry
+    intro x₁
+    rintro ⟨h, ⟨hH,x₁_eq_cong_h⟩⟩
+    use h⁻¹
+    constructor
+    apply H.inv_mem hH
+    rw [x₁_eq_cong_h]
+    group
   mul_mem' := by
     dsimp
-    sorry
+    intro a b
+    rintro ⟨h, ⟨hH,a_cong_h⟩⟩ ⟨h', ⟨h'H,b_cong_h'⟩⟩
+    use h*h'
+    constructor
+    apply H.mul_mem hH h'H
+    rw [a_cong_h,b_cong_h']; group
 
 example {G H : Type*} [Group G] [Group H] (G' : Subgroup G) (f : G →* H) : Subgroup H :=
   Subgroup.map f G'
@@ -117,23 +131,36 @@ variable {G H : Type*} [Group G] [Group H]
 open Subgroup
 
 example (φ : G →* H) (S T : Subgroup H) (hST : S ≤ T) : comap φ S ≤ comap φ T := by
-  sorry
+  intro _ x_in_pre_S
+  apply hST x_in_pre_S
 
 example (φ : G →* H) (S T : Subgroup G) (hST : S ≤ T) : map φ S ≤ map φ T := by
-  sorry
+  intro x ⟨u, u_in_S, im_u_eq_x⟩
+  use u
+  exact ⟨hST u_in_S, im_u_eq_x⟩
 
 variable {K : Type*} [Group K]
 
 -- Remember you can use the `ext` tactic to prove an equality of subgroups.
 example (φ : G →* H) (ψ : H →* K) (U : Subgroup K) :
     comap (ψ.comp φ) U = comap φ (comap ψ U) := by
-  sorry
+  ext x
+  constructor
+  intro h
+  simp [comap] at *
+  apply h
+  simp [comap]
 
 -- Pushing a subgroup along one homomorphism and then another is equal to
 -- pushing it forward along the composite of the homomorphisms.
 example (φ : G →* H) (ψ : H →* K) (S : Subgroup G) :
     map (ψ.comp φ) S = map ψ (S.map φ) := by
-  sorry
+  ext x
+  constructor
+  intro h
+  simp [map] at *; assumption
+  intro h
+  simp [map] at *; assumption
 
 end exercises
 
@@ -153,13 +180,37 @@ lemma eq_bot_iff_card {G : Type*} [Group G] {H : Subgroup G} :
     H = ⊥ ↔ Nat.card H = 1 := by
   suffices (∀ x ∈ H, x = 1) ↔ ∃ x ∈ H, ∀ a ∈ H, a = x by
     simpa [eq_bot_iff_forall, Nat.card_eq_one_iff_exists]
-  sorry
+  constructor
+  intro x_eq_1
+  use 1
+  constructor
+  apply H.one_mem'
+  apply x_eq_1
+  rintro ⟨x, ⟨xH, all_a_eq_x⟩⟩
+  have : x = 1 := by
+    apply (all_a_eq_x 1 H.one_mem).symm
+  intro y yH
+  rw [← this]
+  apply all_a_eq_x
+  apply yH
 
 #check card_dvd_of_le
 
 lemma inf_bot_of_coprime {G : Type*} [Group G] (H K : Subgroup G)
     (h : (Nat.card H).Coprime (Nat.card K)) : H ⊓ K = ⊥ := by
-  sorry
+    have : Nat.card (H ⊓ K : Set G) ∣ 1 := by
+      have h1 : Nat.card ({x : G // x ∈ H ⊓ K}) ∣ Nat.card H := by
+        apply Subgroup.card_dvd_of_le
+        apply inf_le_left
+      have h2 : Nat.card ({x : G // x ∈ H ⊓ K}) ∣ Nat.card K := by
+        apply Subgroup.card_dvd_of_le
+        apply inf_le_right
+      calc
+      Nat.card (H ⊓ K : Set G) ∣ gcd (Nat.card H) (Nat.card K) := by apply dvd_gcd h1 h2
+      _ = 1 := by apply h
+    apply eq_bot_iff_card.mpr
+    apply Nat.eq_one_of_dvd_one this
+
 open Equiv
 
 example {X : Type*} [Finite X] : Subgroup.closure {σ : Perm X | Perm.IsCycle σ} = ⊤ :=
