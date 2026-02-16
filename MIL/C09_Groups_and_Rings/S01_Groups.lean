@@ -265,6 +265,8 @@ example {G X : Type*} [Group G] [MulAction G X] : G →* Equiv.Perm X :=
 def CayleyIsoMorphism (G : Type*) [Group G] : G ≃* (toPermHom G G).range :=
   Equiv.Perm.subgroupOfMulAction G G
 
+example {G X : Type*} [Group G] [MulAction G X] : Setoid X := orbitRel G X
+
 example {G X : Type*} [Group G] [MulAction G X] :
     X ≃ (ω : orbitRel.Quotient G X) × (orbit G (Quotient.out ω)) :=
   MulAction.selfEquivSigmaOrbits G X
@@ -279,14 +281,31 @@ example {G : Type*} [Group G] (H : Subgroup G) : G ≃ (G ⧸ H) × H :=
 variable {G : Type*} [Group G]
 
 lemma conjugate_one (H : Subgroup G) : conjugate 1 H = H := by
-  sorry
+  ext x
+  simp only [conjugate] --simp finishes it straight away but I wanted to work things out more.
+  constructor
+  rintro ⟨h,hH,x_cong_h_by_1⟩
+  group at x_cong_h_by_1
+  rw [x_cong_h_by_1]; apply hH
+  intro hH
+  use x
+  constructor; apply hH; group
 
 instance : MulAction G (Subgroup G) where
   smul := conjugate
-  one_smul := by
-    sorry
+  one_smul := fun b ↦ conjugate_one b
   mul_smul := by
-    sorry
+    intro x y H
+    ext z
+    constructor
+    rintro ⟨a,⟨aH,rfl⟩⟩
+    use y*a*y⁻¹
+    constructor
+    use a; group
+    rintro ⟨b,⟨⟨a,⟨aH, rfl⟩⟩,rfl⟩⟩
+    use a
+    constructor; apply aH
+    group
 
 end GroupActions
 
@@ -325,7 +344,12 @@ open MonoidHom
 
 lemma aux_card_eq [Finite G] (h' : Nat.card G = Nat.card H * Nat.card K) :
     Nat.card (G ⧸ H) = Nat.card K := by
-  sorry
+  rw [← Subgroup.index_mul_card H, mul_comm (Nat.card ↥H) (Nat.card ↥K)] at h'
+  apply Nat.eq_of_mul_eq_mul_right at h'
+  rw[← h']
+  apply Subgroup.index_eq_card
+  apply Nat.card_pos
+
 variable [H.Normal] [K.Normal] [Fintype G] (h : Disjoint H K)
   (h' : Nat.card G = Nat.card H * Nat.card K)
 
@@ -335,10 +359,44 @@ variable [H.Normal] [K.Normal] [Fintype G] (h : Disjoint H K)
 #check ker_restrict
 
 def iso₁ : K ≃* G ⧸ H := by
-  sorry
+  let φ := (QuotientGroup.mk' H).restrict K
+  have ker_phi_1: φ.ker = ⊥ := by
+    calc
+    ((QuotientGroup.mk' H).restrict K).ker = (QuotientGroup.mk' H).ker.subgroupOf K := by apply ker_restrict
+    _ = H.subgroupOf K := by rw [QuotientGroup.ker_mk']
+    _ = ⊥ := by apply subgroupOf_eq_bot.mpr h
+  rw [ker_eq_bot_iff] at ker_phi_1
+  apply MulEquiv.ofBijective φ
+  apply (Nat.bijective_iff_injective_and_card φ).mpr
+  constructor
+  apply ker_phi_1
+  symm
+  apply aux_card_eq h'
+
 def iso₂ : G ≃* (G ⧸ K) × (G ⧸ H) := by
-  sorry
+  let φ := (QuotientGroup.mk' K).prod (QuotientGroup.mk' H)
+  apply MulEquiv.ofBijective φ
+  apply (Nat.bijective_iff_injective_and_card φ).mpr
+  constructor
+  apply (ker_eq_bot_iff φ).mp
+  rw [ker_prod]
+  rw [QuotientGroup.ker_mk', QuotientGroup.ker_mk']
+  apply disjoint_iff.mp
+  apply Disjoint.symm h
+  rw [Nat.card_prod]
+  have h'' :  Nat.card G =  Nat.card K * Nat.card H := by rw [Nat.mul_comm]; apply h'
+  rw [aux_card_eq h', aux_card_eq h'']; apply h'
+
 #check MulEquiv.prodCongr
 
-def finalIso : G ≃* H × K :=
-  sorry
+def finalIso : G ≃* H × K := by
+  apply MulEquiv.trans (iso₂ h h')
+  apply MulEquiv.prodCongr
+  show G ⧸ K ≃* ↥H --this is basically iso₁ with some symmetry applied.
+  -- need symmetry of h : Disjoint H K
+  have sh : Disjoint K H := by apply Disjoint.symm h
+  -- need symmetry of h' : Nat.card G = Nat.card H * Nat.card K
+  have sh' : Nat.card G = Nat.card K * Nat.card H := by rw [mul_comm]; apply h'
+  -- now (iso₁ sh sh') tells us that H ≃* G ⧸ K
+  apply (iso₁ sh sh').symm
+  apply (iso₁ h h').symm
