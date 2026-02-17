@@ -11,6 +11,8 @@ example {R : Type*} [CommRing R] (x y : R) : (x + y) ^ 2 = x ^ 2 + y ^ 2 + 2 * x
 
 example (x y : ℕ) : (x + y) ^ 2 = x ^ 2 + y ^ 2 + 2 * x * y := by ring
 
+#check IsUnit
+
 example (x : ℤˣ) : x = 1 ∨ x = -1 := Int.units_eq_one_or x
 
 example {M : Type*} [Monoid M] (x : Mˣ) : (x : M) * x⁻¹ = 1 := Units.mul_inv x
@@ -82,21 +84,32 @@ open Ideal Quotient Function
 
 /-- The homomorphism from ``R ⧸ ⨅ i, I i`` to ``Π i, R ⧸ I i`` featured in the Chinese
   Remainder Theorem. -/
-def chineseMap (I : ι → Ideal R) : (R ⧸ ⨅ i, I i) →+* Π i, R ⧸ I i :=
-  sorry
+def chineseMap (I : ι → Ideal R) : (R ⧸ ⨅ i, I i) →+* Π i, R ⧸ I i := by
+  let φ := Pi.ringHom (fun i ↦ Ideal.Quotient.mk (I i))
+  apply Ideal.Quotient.lift (⨅ i, I i) φ _
+  intro a a_in_prod_Ii
+  apply RingHom.mem_ker.mp
+  rw [ker_Pi_Quotient_mk]
+  apply a_in_prod_Ii
 
 lemma chineseMap_mk (I : ι → Ideal R) (x : R) :
     chineseMap I (Quotient.mk _ x) = fun i : ι ↦ Ideal.Quotient.mk (I i) x :=
-  sorry
+  rfl
 
 lemma chineseMap_mk' (I : ι → Ideal R) (x : R) (i : ι) :
     chineseMap I (mk _ x) i = mk (I i) x :=
-  sorry
+  rfl
 
 #check injective_lift_iff
 
 lemma chineseMap_inj (I : ι → Ideal R) : Injective (chineseMap I) := by
-  sorry
+  apply (injective_lift_iff ?_).mpr; apply ker_Pi_Quotient_mk;
+  intro a a_in_prod_Ii
+  apply RingHom.mem_ker.mp
+  rw [ker_Pi_Quotient_mk]
+  apply a_in_prod_Ii
+  /- the one line proof was rw [chineseMap, injective_lift_iff, ker_Pi_Quotient_mk].
+     I tried to make rw [injective_lift_iff] work but needed to rw [chineseMap] first... -/
 
 #check IsCoprime
 #check isCoprime_iff_add
@@ -118,10 +131,15 @@ theorem isCoprime_Inf {I : Ideal R} {J : ι → Ideal R} {s : Finset ι}
       rw [Finset.iInf_insert, inf_comm, one_eq_top, eq_top_iff, ← one_eq_top]
       set K := ⨅ j ∈ s, J j
       calc
-        1 = I + K                  := sorry
-        _ = I + K * (I + J i)      := sorry
-        _ = (1 + K) * I + K * J i  := sorry
-        _ ≤ I + K ⊓ J i            := sorry
+        1 = I + K                  := by symm; apply hs; intro j jS; apply hf; apply Finset.mem_insert_of_mem jS
+        _ = I + K * (I + J i)      := by rw [hf i]; ring; apply Finset.mem_insert_self
+        _ = (1 + K) * I + K * J i  := by ring
+        _ ≤ I + K ⊓ J i            := by
+          simp
+          calc
+             K * J i ≤ K ⊓ J i := by apply Ideal.mul_le_inf
+             _ ≤ I ⊔ K ⊓ J i := by apply SemilatticeSup.le_sup_right
+
 lemma chineseMap_surj [Fintype ι] {I : ι → Ideal R}
     (hI : ∀ i j, i ≠ j → IsCoprime (I i) (I j)) : Surjective (chineseMap I) := by
   classical
@@ -130,11 +148,29 @@ lemma chineseMap_surj [Fintype ι] {I : ι → Ideal R}
   have key : ∀ i, ∃ e : R, mk (I i) e = 1 ∧ ∀ j, j ≠ i → mk (I j) e = 0 := by
     intro i
     have hI' : ∀ j ∈ ({i} : Finset ι)ᶜ, IsCoprime (I i) (I j) := by
-      sorry
-    sorry
+      intro j j_not_i; simp at j_not_i; push_neg at j_not_i; apply hI i j j_not_i.symm
+    have hI'' : IsCoprime (I i) (⨅ j ∈ ({i} : Finset ι)ᶜ, (I j)) := by
+      apply isCoprime_Inf hI'
+    rw [isCoprime_iff_exists] at hI''
+    rcases hI'' with ⟨a, aIi, b, b_in_all_Ij_j_neq_i,a_add_b_eq_1⟩
+    have : b = 1 - a := by apply eq_sub_of_add_eq' a_add_b_eq_1
+    use b
+    constructor
+    rw [this]
+    simp [Ideal.Quotient.eq_zero_iff_mem.mpr aIi]
+    intro j j_neq_i
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    simp [Ideal.mem_iInf] at b_in_all_Ij_j_neq_i
+    apply b_in_all_Ij_j_neq_i j j_neq_i
   choose e he using key
   use mk _ (∑ i, f i * e i)
-  sorry
+  ext k
+  rw [chineseMap_mk', map_sum,Fintype.sum_eq_single k] -- looked at solutions to get this. Tried rw [chineseMap_mk'] but didn't think to use ext k
+  · rw [RingHom.map_mul]
+    rw [(hf k), (he k).1]; ring
+  intro l l_neq_k
+  rw [RingHom.map_mul]
+  rw [(he l).2]; ring; apply l_neq_k.symm
 
 noncomputable def chineseIso [Fintype ι] (f : ι → Ideal R)
     (hf : ∀ i j, i ≠ j → IsCoprime (f i) (f j)) : (R ⧸ ⨅ i, f i) ≃+* Π i, R ⧸ f i :=
