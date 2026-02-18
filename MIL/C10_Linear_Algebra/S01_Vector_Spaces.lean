@@ -22,8 +22,6 @@ example {R M : Type*} [CommSemiring R] [AddCommMonoid M] [Module R M] :
     Module (Ideal R) (Submodule R M) :=
   inferInstance
 
-
-
 variable {W : Type*} [AddCommGroup W] [Module K W]
 
 variable (φ : V →ₗ[K] W)
@@ -34,6 +32,7 @@ example (a : K) (v : V) : φ (a • v) = a • φ v :=
 example (v w : V) : φ (v + w) = φ v + φ w :=
   map_add φ v w
 
+#synth Module K (V →ₗ[K] V) --K module structure on linear maps.
 
 variable (ψ : V →ₗ[K] W)
 
@@ -50,8 +49,6 @@ example : V →ₗ[K] V where
   toFun v := 3 • v
   map_add' _ _ := smul_add ..
   map_smul' _ _ := smul_comm ..
-
-
 
 #check (φ.map_add' : ∀ x y : V, φ.toFun (x + y) = φ.toFun x + φ.toFun y)
 #check (φ.map_add : ∀ x y : V, φ (x + y) = φ x + φ y)
