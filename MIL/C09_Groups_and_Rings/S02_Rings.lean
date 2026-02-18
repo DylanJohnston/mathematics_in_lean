@@ -164,8 +164,8 @@ lemma chineseMap_surj [Fintype ι] {I : ι → Ideal R}
     apply b_in_all_Ij_j_neq_i j j_neq_i
   choose e he using key
   use mk _ (∑ i, f i * e i)
-  ext k
-  rw [chineseMap_mk', map_sum,Fintype.sum_eq_single k] -- looked at solutions to get this. Tried rw [chineseMap_mk'] but didn't think to use ext k
+  ext k -- looked at solutions to get this. Tried rw [chineseMap_mk'] but didn't think to use ext k
+  rw [chineseMap_mk', map_sum,Fintype.sum_eq_single k] -- did not know how to deal with ∑ x. Needed Fintype.sum_eq_single
   · rw [RingHom.map_mul]
     rw [(hf k), (he k).1]; ring
   intro l l_neq_k
