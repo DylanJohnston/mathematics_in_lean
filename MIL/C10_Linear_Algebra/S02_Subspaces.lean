@@ -30,16 +30,24 @@ noncomputable example : Submodule ℝ ℂ where
     use c*a
     simp
 
+#check Submodule.add_mem
 
 def preimage {W : Type*} [AddCommGroup W] [Module K W] (φ : V →ₗ[K] W) (H : Submodule K W) :
     Submodule K V where
   carrier := φ ⁻¹' H
   zero_mem' := by
-    sorry
+    rw [Set.mem_preimage, map_zero]
+    apply Submodule.zero_mem
   add_mem' := by
-    sorry
+    intro a b a_in_pre b_in_pre
+    rw [Set.mem_preimage] at *
+    rw [map_add]
+    apply add_mem a_in_pre b_in_pre
   smul_mem' := by
-    sorry
+    intro c x x_in_pre
+    rw [Set.mem_preimage] at *
+    rw [map_smul]
+    apply H.smul_mem c x_in_pre
 
 example (U : Submodule K V) : Module K U := inferInstance
 
@@ -99,14 +107,23 @@ example {S T : Submodule K V} {x : V} (h : x ∈ S ⊔ T) :
     ∃ s ∈ S, ∃ t ∈ T, x = s + t  := by
   rw [← S.span_eq, ← T.span_eq, ← Submodule.span_union] at h
   induction h using Submodule.span_induction with
-  | mem y h =>
-      sorry
-  | zero =>
-      sorry
-  | add x y hx hy hx' hy' =>
-      sorry
-  | smul a x hx hx' =>
-      sorry
+  | mem y h => {
+      rcases h with ys |yt
+      use y; constructor; apply ys; use 0; constructor; apply zero_mem; simp
+      use 0; constructor; apply zero_mem; use y; constructor; apply yt; simp
+      }
+  | zero => {
+      use 0; constructor; apply zero_mem; use 0; constructor; apply zero_mem; simp
+    }
+  | add x y hx hy hx' hy' => {
+      rcases hx' with ⟨s,sS,t,tT,x_eq⟩
+      rcases hy' with ⟨s',s'S,t',t'T,y_eq⟩
+      use s+s'; constructor; apply add_mem sS s'S; use t+t'; constructor; apply add_mem tT t'T; rw [x_eq,y_eq]; module
+    }
+  | smul a x hx hx' => {
+      rcases hx' with ⟨s,sS,t,tT,x_eq⟩
+      use a • s; constructor; apply Submodule.smul_mem; apply sS; use a • t; constructor; apply Submodule.smul_mem; apply tT; rw[x_eq]; module
+    }
 
 section
 
@@ -122,8 +139,6 @@ example : LinearMap.range φ = .map φ ⊤ := LinearMap.range_eq_map φ
 
 example : LinearMap.ker φ = .comap φ ⊥ := Submodule.comap_bot φ -- or `rfl`
 
-
-
 open Function LinearMap
 
 example : Injective φ ↔ ker φ = ⊥ := ker_eq_bot.symm
@@ -136,7 +151,18 @@ example : Surjective φ ↔ range φ = ⊤ := range_eq_top.symm
 
 example (E : Submodule K V) (F : Submodule K W) :
     Submodule.map φ E ≤ F ↔ E ≤ Submodule.comap φ F := by
-  sorry
+  constructor
+  intro mapEF
+  intro e eE
+  simp
+  apply mapEF
+  apply Submodule.mem_map_of_mem eE
+  intro comapEF
+  intro f fmapE
+  rcases fmapE with ⟨e,eE,phi_e_eq_f⟩
+  rw [← phi_e_eq_f]
+  rw [← Submodule.mem_comap]
+  apply comapEF eE
 
 variable (E : Submodule K V)
 
@@ -161,7 +187,21 @@ open Submodule
 #check Submodule.comap_map_eq
 
 example : Submodule K (V ⧸ E) ≃ { F : Submodule K V // E ≤ F } where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun S => ⟨comap E.mkQ S, by
+                      let S' := comap E.mkQ S
+                      have : S = map E.mkQ S' := by apply (map_comap_eq_self _).symm; rw [E.range_mkQ]; apply le_top
+                      rw [this, Submodule.comap_map_eq, E.ker_mkQ]
+                      apply le_sup_of_le_right; rfl
+                    ⟩
+  invFun := fun S' => map E.mkQ S'
+  left_inv := by {
+    intro S
+    simp
+    rw [Submodule.map_comap_eq, E.range_mkQ]
+    apply top_inf_eq S
+  }
+  right_inv := by {
+    intro S'
+    simp
+    apply bot_sup_eq
+  }
