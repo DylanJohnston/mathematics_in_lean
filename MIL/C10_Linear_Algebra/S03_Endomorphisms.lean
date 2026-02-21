@@ -5,8 +5,6 @@ import Mathlib.LinearAlgebra.Charpoly.Basic
 import MIL.Common
 
 
-
-
 variable {K : Type*} [Field K] {V : Type*} [AddCommGroup V] [Module K V]
 
 variable {W : Type*} [AddCommGroup W] [Module K W]
@@ -26,13 +24,20 @@ example (φ : End K V) : aeval φ (X : K[X]) = φ :=
   aeval_X φ
 
 
-
 #check Submodule.eq_bot_iff
 #check Submodule.mem_inf
 #check LinearMap.mem_ker
 
 example (P Q : K[X]) (h : IsCoprime P Q) (φ : End K V) : ker (aeval φ P) ⊓ ker (aeval φ Q) = ⊥ := by
-  sorry
+  rcases h with ⟨a,b, abeq⟩
+  rw [Submodule.eq_bot_iff]
+  intro x
+  rw [Submodule.mem_inf]
+  intro ⟨xkerphiP,xkerphiQ⟩
+  rw [LinearMap.mem_ker] at *
+  have : ((aeval φ) (1 : K[X])) x = 0 := by rw [← abeq]; simp [xkerphiP, xkerphiQ]
+  rw [← this]
+  simp
 
 #check Submodule.add_mem_sup
 #check map_mul
@@ -41,11 +46,28 @@ example (P Q : K[X]) (h : IsCoprime P Q) (φ : End K V) : ker (aeval φ P) ⊓ k
 
 example (P Q : K[X]) (h : IsCoprime P Q) (φ : End K V) :
     ker (aeval φ P) ⊔ ker (aeval φ Q) = ker (aeval φ (P*Q)) := by
-  sorry
+  rcases h with ⟨a,b,abeq⟩
+  apply le_antisymm
+  apply sup_le
+  intro x xkerphiP
+  rw [mem_ker] at *
+  rw [mul_comm P Q, map_mul, End.mul_apply]
+  rw [xkerphiP]
+  apply map_zero
+  rw [map_mul]
+  apply LinearMap.ker_le_ker_comp
+  rw [map_mul]
+  intro x xkerphiPQ
+  rw [mem_ker,← map_mul] at xkerphiPQ
+  have : ((aeval φ) (1 : K[X])) x = x := by simp
+  rw [← abeq, map_add] at this
+  rw [← this, sup_comm]
+  apply Submodule.add_mem_sup
+  rw [mem_ker, ← End.mul_apply, ← map_mul, ← mul_assoc, mul_comm Q a, mul_assoc, mul_comm Q P, map_mul, End.mul_apply, xkerphiPQ]; simp
+  rw [mem_ker, ← End.mul_apply, ← map_mul, ← mul_assoc, mul_comm P b, mul_assoc, map_mul, End.mul_apply, xkerphiPQ]; simp
+
 example (φ : End K V) (a : K) : φ.eigenspace a = LinearMap.ker (φ - a • 1) :=
   End.eigenspace_def
-
-
 
 example (φ : End K V) (a : K) : φ.HasEigenvalue a ↔ φ.eigenspace a ≠ ⊥ :=
   Iff.rfl
@@ -68,4 +90,3 @@ example [FiniteDimensional K V] (φ : End K V) (a : K) :
 -- Cayley-Hamilton
 example [FiniteDimensional K V] (φ : End K V) : aeval φ φ.charpoly = 0 :=
   φ.aeval_self_charpoly
-
