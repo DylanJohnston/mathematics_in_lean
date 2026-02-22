@@ -27,9 +27,12 @@ open Matrix
 
 -- matrices acting on vectors on the right
 #eval  ![1, 1, 1] ᵥ* !![1, 2; 3, 4; 5, 6] -- ![9, 12]
+
 #eval replicateRow (Fin 1) ![1, 2] -- !![1, 2]
 
 #eval replicateCol (Fin 1) ![1, 2] -- !![1; 2]
+
+#eval replicateCol (Fin 3) ![1, 2] -- !![1, 1, 1; 2, 2, 2]
 
 -- vector dot product
 #eval ![1, 2] ⬝ᵥ ![3, 4] -- `11`
@@ -86,6 +89,8 @@ example {n : ℕ} (v : Fin n → ℝ) :
   rfl
 end
 end matrices
+
+
 variable {K : Type*} [Field K] {V : Type*} [AddCommGroup V] [Module K V]
 
 section
@@ -122,6 +127,7 @@ example : Finsupp.basisSingleOne.repr = LinearEquiv.refl K (ι →₀ K) :=
 example (i : ι) : Finsupp.basisSingleOne i = Finsupp.single i 1 :=
   rfl
 
+#check Function.update
 
 example [Finite ι] (x : ι → K) (i : ι) : (Pi.basisFun K ι).repr x i = x i := by
   simp
@@ -130,9 +136,6 @@ example [Finite ι] (x : ι → K) (i : ι) : (Pi.basisFun K ι).repr x i = x i 
 example [Fintype ι] : ∑ i : ι, B.repr v i • (B i) = v :=
   B.sum_repr v
 
-
-
-
 example (c : ι →₀ K) (f : ι → V) (s : Finset ι) (h : c.support ⊆ s) :
     Finsupp.linearCombination K f c = ∑ i ∈ s, c i • f i :=
   Finsupp.linearCombination_apply_of_mem_supported K h
@@ -140,6 +143,7 @@ example (c : ι →₀ K) (f : ι → V) (s : Finset ι) (h : c.support ⊆ s) :
 example : Finsupp.linearCombination K B (B.repr v) = v :=
   B.linearCombination_repr v
 variable (f : ι → V) in
+
 #check (Finsupp.linearCombination K f : (ι →₀ K) →ₗ[K] V)
 
 section
@@ -156,9 +160,6 @@ example (i : ι) : B.constr K u (B i) = u i :=
 
 example (φ ψ : V →ₗ[K] W) (h : ∀ i, φ (B i) = ψ (B i)) : φ = ψ :=
   B.ext h
-
-
-
 
 variable {ι' : Type*} (B' : Basis ι' K W) [Fintype ι] [DecidableEq ι] [Fintype ι'] [DecidableEq ι']
 
@@ -198,7 +199,13 @@ example [Fintype ι] (B' : Basis ι K V) (φ : End K V) :
   set M' := toMatrix B' B' φ
   set P := (toMatrix B B') LinearMap.id
   set P' := (toMatrix B' B) LinearMap.id
-  sorry
+  have : M' = P*M*P' := by
+    unfold M M' P P'
+    rw [← toMatrix_comp, ← toMatrix_comp, id_comp, comp_id]
+  rw [this]
+  rw[det_mul, det_mul,mul_comm,← mul_assoc,← det_mul]
+  unfold P P'
+  rw [← toMatrix_comp, id_comp, toMatrix_id, det_one, one_mul]
 end
 
 section
@@ -245,7 +252,16 @@ example : finrank K (E ⊔ F : Submodule K V) + finrank K (E ⊓ F : Submodule K
 example : finrank K E ≤ finrank K V := Submodule.finrank_le E
 example (h : finrank K V < finrank K E + finrank K F) :
     Nontrivial (E ⊓ F : Submodule K V) := by
-  sorry
+  rw [← Module.finrank_pos_iff (R := K)]
+  have : finrank K (E ⊓ F : Submodule K V) = finrank K E + finrank K F - finrank K (E ⊔ F : Submodule K V) := by
+    rw [← Submodule.finrank_sup_add_finrank_inf_eq E F]; simp
+  rw [this]
+  calc
+  0 ≤ finrank K V - finrank K (E ⊔ F: Submodule K V) := by simp [Submodule.finrank_le (E ⊔ F)]
+  _ < finrank K ↥E + finrank K ↥F - finrank K ↥(E ⊔ F) := by
+    apply Nat.sub_lt_sub_right
+    apply Submodule.finrank_le
+    apply h
 end
 
 #check V -- Type u_2
