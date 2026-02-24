@@ -6,15 +6,47 @@ open Set Filter Topology
 def principal {α : Type*} (s : Set α) : Filter α
     where
   sets := { t | s ⊆ t }
-  univ_sets := sorry
-  sets_of_superset := sorry
-  inter_sets := sorry
+  univ_sets := by apply subset_univ
+  sets_of_superset := by {
+    intro x y hxf x_sub_y
+    simp at *
+    apply subset_trans (b:=x) hxf x_sub_y
+  }
+  inter_sets :=  by {
+    intro x y hxf hyf
+    simp at *
+    exact ⟨hxf,hyf⟩
+  }
 
 example : Filter ℕ :=
   { sets := { s | ∃ a, ∀ b, a ≤ b → b ∈ s }
-    univ_sets := sorry
-    sets_of_superset := sorry
-    inter_sets := sorry }
+    univ_sets := by {
+      use 1
+      intro b _
+      trivial
+    }
+    sets_of_superset := by {
+      intro x y hxf x_sub_y
+      rcases hxf with ⟨m,hmbx⟩
+      simp
+      use m
+      intro b m_le_b
+      have bx : b ∈ x := by apply hmbx b m_le_b
+      apply x_sub_y bx
+    }
+    inter_sets := by {
+      intro x y hxf hyf
+      simp at *
+      rcases hxf with ⟨m,hm⟩
+      rcases hyf with ⟨n,hn⟩
+      use max m n
+      intro b mmn_le_b
+      rw [max_le_iff] at mmn_le_b
+      constructor
+      apply hm b; apply mmn_le_b.1
+      apply hn b; apply mmn_le_b.2
+    }
+  }
 
 def Tendsto₁ {X Y : Type*} (f : X → Y) (F : Filter X) (G : Filter Y) :=
   ∀ V ∈ G, f ⁻¹' V ∈ F
@@ -33,8 +65,15 @@ example {X Y : Type*} (f : X → Y) (F : Filter X) (G : Filter Y) :
     ∀ {α β γ} {f : Filter α} {m : α → β} {m' : β → γ}, map m' (map m f) = map (m' ∘ m) f)
 
 example {X Y Z : Type*} {F : Filter X} {G : Filter Y} {H : Filter Z} {f : X → Y} {g : Y → Z}
-    (hf : Tendsto₁ f F G) (hg : Tendsto₁ g G H) : Tendsto₁ (g ∘ f) F H :=
-  sorry
+    (hf : Tendsto₁ f F G) (hg : Tendsto₁ g G H) : Tendsto₁ (g ∘ f) F H := by
+    change map (g ∘ f) F ≤ H
+    have hf2: map f F ≤ G := by apply hf
+    have hg2 : map g G ≤ H := by apply hg
+    rw [← Filter.map_map]
+    calc
+    map g (map f F) ≤ map g G := by
+      apply map_mono; apply hf2
+    _ ≤ H := by apply hg2
 
 variable (f : ℝ → ℝ) (x₀ y₀ : ℝ)
 
@@ -52,12 +91,16 @@ end
 example : 𝓝 (x₀, y₀) = 𝓝 x₀ ×ˢ 𝓝 y₀ :=
   nhds_prod_eq
 
+#check comap Prod.fst
+
 #check le_inf_iff
 
 example (f : ℕ → ℝ × ℝ) (x₀ y₀ : ℝ) :
     Tendsto f atTop (𝓝 (x₀, y₀)) ↔
-      Tendsto (Prod.fst ∘ f) atTop (𝓝 x₀) ∧ Tendsto (Prod.snd ∘ f) atTop (𝓝 y₀) :=
-  sorry
+      Tendsto (Prod.fst ∘ f) atTop (𝓝 x₀) ∧ Tendsto (Prod.snd ∘ f) atTop (𝓝 y₀) := by
+  simp [Tendsto, nhds_prod_eq]
+  show map f atTop ≤ (comap Prod.fst (𝓝 x₀)) ⊓ (comap Prod.snd (𝓝 y₀)) ↔ map (Prod.fst ∘ f) atTop ≤ 𝓝 x₀ ∧ map (Prod.snd ∘ f) atTop ≤ 𝓝 y₀
+  simp [Filter.map_le_iff_le_comap, comap_comap]
 
 example (x₀ : ℝ) : HasBasis (𝓝 x₀) (fun ε : ℝ ↦ 0 < ε) fun ε ↦ Ioo (x₀ - ε) (x₀ + ε) :=
   nhds_basis_Ioo_pos x₀
@@ -102,4 +145,3 @@ example (P Q R : ℕ → Prop) (hP : ∀ᶠ n in atTop, P n) (hQ : ∀ᶠ n in a
 example (u : ℕ → ℝ) (M : Set ℝ) (x : ℝ) (hux : Tendsto u atTop (𝓝 x))
     (huM : ∀ᶠ n in atTop, u n ∈ M) : x ∈ closure M :=
   sorry
-
