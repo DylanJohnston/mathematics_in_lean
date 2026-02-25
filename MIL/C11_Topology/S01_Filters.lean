@@ -143,5 +143,12 @@ example (P Q R : ℕ → Prop) (hP : ∀ᶠ n in atTop, P n) (hQ : ∀ᶠ n in a
 #check neBot_of_le
 
 example (u : ℕ → ℝ) (M : Set ℝ) (x : ℝ) (hux : Tendsto u atTop (𝓝 x))
-    (huM : ∀ᶠ n in atTop, u n ∈ M) : x ∈ closure M :=
-  sorry
+    (huM : ∀ᶠ n in atTop, u n ∈ M) : x ∈ closure M := by
+  rw [mem_closure_iff_clusterPt]
+  change (𝓝 x ⊓ 𝓟 M).NeBot
+  rw [Filter.inf_principal_neBot_iff]
+  intro U U_nbhd_x
+  have ht : ∀ᶠ (n : ℕ) in atTop, u n ∈ U := by apply hux U_nbhd_x
+  have hUM : ∀ᶠ (n : ℕ) in atTop, u n ∈ U ∩ M := by apply Eventually.and (hux U_nbhd_x) huM
+  rcases hUM.exists with ⟨n,n_in_U_cap_M⟩
+  use u n
