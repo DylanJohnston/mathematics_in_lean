@@ -48,8 +48,16 @@ example {X Y : Type*} [MetricSpace X] [MetricSpace Y] {f : X → Y} (hf : Contin
     Continuous fun p : X × X ↦ dist (f p.1) (f p.2) :=
   hf.fst'.dist hf.snd'
 
-example {f : ℝ → X} (hf : Continuous f) : Continuous fun x : ℝ ↦ f (x ^ 2 + x) :=
-  sorry
+#check Continuous.add
+#check continuous_pow
+#check continuous_id
+
+example {f : ℝ → X} (hf : Continuous f) : Continuous fun x : ℝ ↦ f (x ^ 2 + x) := by
+  apply Continuous.comp hf
+  apply Continuous.add
+  apply continuous_pow 2
+  apply continuous_id
+
 example {X Y : Type*} [MetricSpace X] [MetricSpace Y] (f : X → Y) (a : X) :
     ContinuousAt f a ↔ ∀ ε > 0, ∃ δ > 0, ∀ {x}, dist x a < δ → dist (f x) (f a) < ε :=
   Metric.continuousAt_iff
@@ -83,7 +91,15 @@ example {s : Set X} : a ∈ closure s ↔ ∀ ε > 0, ∃ b ∈ s, a ∈ Metric.
 
 example {u : ℕ → X} (hu : Tendsto u atTop (𝓝 a)) {s : Set X} (hs : ∀ n, u n ∈ s) :
     a ∈ closure s := by
-  sorry
+  rw [mem_closure_iff]
+  intro o o_open a_in_o
+  have : ∀ᶠ n in atTop, u n ∈ o := by
+    apply hu
+    apply IsOpen.mem_nhds o_open a_in_o
+  have hOS : ∀ᶠ n in atTop, u n ∈ o ∩ s := by apply this.and (Eventually.of_forall hs)
+  rcases hOS.exists with ⟨z, hz⟩
+  use u z
+
 example {x : X} {s : Set X} : s ∈ 𝓝 x ↔ ∃ ε > 0, Metric.ball x ε ⊆ s :=
   Metric.nhds_basis_ball.mem_iff
 
@@ -201,4 +217,3 @@ example [CompleteSpace X] (f : ℕ → Set X) (ho : ∀ n, IsOpen (f n)) (hd : �
   have I : ∀ n, ∀ m ≥ n, closedBall (c m) (r m) ⊆ closedBall (c n) (r n) := by sorry
   have yball : ∀ n, y ∈ closedBall (c n) (r n) := by sorry
   sorry
-
