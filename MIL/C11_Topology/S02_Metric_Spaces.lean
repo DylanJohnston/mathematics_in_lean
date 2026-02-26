@@ -131,15 +131,53 @@ example {X : Type*} [MetricSpace X] [CompactSpace X] : IsCompact (univ : Set X) 
 
 #check IsCompact.isClosed
 
+
 example {X : Type*} [MetricSpace X] {Y : Type*} [MetricSpace Y] {f : X → Y} :
     UniformContinuous f ↔
       ∀ ε > 0, ∃ δ > 0, ∀ {a b : X}, dist a b < δ → dist (f a) (f b) < ε :=
   Metric.uniformContinuous_iff
 
+#check isClosed_le
+#check eq_empty_or_nonempty
+
 example {X : Type*} [MetricSpace X] [CompactSpace X]
       {Y : Type*} [MetricSpace Y] {f : X → Y}
     (hf : Continuous f) : UniformContinuous f := by
-  sorry
+  rw [Metric.uniformContinuous_iff]
+  intro eps eps_pos
+  let φ : X × X → ℝ := fun p ↦ dist (f p.1) (f p.2)
+  let K : Set (X × X) := {p : X × X | eps ≤ φ p}
+  rcases eq_empty_or_nonempty K with h|h
+  use 1; constructor; apply zero_lt_one
+  intro a b dist_lt_1
+  by_contra dist_ge_eps
+  push_neg at dist_ge_eps
+  have : (a,b) ∈ K := by apply dist_ge_eps
+  rw [h] at this
+  contradiction
+  have Kclosed : IsClosed K := by apply isClosed_le; apply continuous_const; continuity
+  have Kcompact : IsCompact K := by apply IsClosed.isCompact Kclosed
+  let f : X × X → ℝ := fun x ↦ dist x.1 x.2
+  have : ContinuousOn f K := by apply Continuous.continuousOn; continuity
+  rcases Kcompact.exists_isMinOn h this with ⟨⟨x0,x1⟩,x0x1_in_K, min_dist_on_K⟩
+  use dist x0 x1
+  constructor
+   -- dist x0 x1 > 0 because dist f x0 f x1 ≥ eps > 0. Cannot find a lemma saying dist f x0 f x1 > 0 → dist x0 x1 > 0
+  by_contra dist_eq_0; push_neg at dist_eq_0
+  have x0_eq_x1 : x0 = x1 := by apply dist_eq_zero.mp; apply le_antisymm dist_eq_0 dist_nonneg
+  have : φ (x0,x1) = 0 := by apply dist_eq_zero.mpr; simp; rw[x0_eq_x1]
+  have : φ (x0,x1) > 0 := by
+    calc
+    φ (x0,x1) ≥ eps := by apply x0x1_in_K
+    _ > 0 := by apply eps_pos
+  linarith
+  -- left to show: if dist a b < dist x0 x1, then (a,b) not in K
+  intro a b dist_ab_lt_dist_x0_x1
+  by_contra dist_fa_fb_ge_eps; push_neg at dist_fa_fb_ge_eps
+  have : (a,b) ∈ K := by apply dist_fa_fb_ge_eps
+  have : f (x0, x1) ≤ f (a, b) := by apply min_dist_on_K this
+  linarith
+
 example (u : ℕ → X) :
     CauchySeq u ↔ ∀ ε > 0, ∃ N : ℕ, ∀ m ≥ N, ∀ n ≥ N, dist (u m) (u n) < ε :=
   Metric.cauchySeq_iff
@@ -156,22 +194,49 @@ open BigOperators
 
 open Finset
 
+#check tendsto_pow_atTop_nhds_zero_of_lt_one
+#check Tendsto.mul
+#check dist_le_range_sum_dist
+
 theorem cauchySeq_of_le_geometric_two' {u : ℕ → X}
     (hu : ∀ n : ℕ, dist (u n) (u (n + 1)) ≤ (1 / 2) ^ n) : CauchySeq u := by
   rw [Metric.cauchySeq_iff']
   intro ε ε_pos
-  obtain ⟨N, hN⟩ : ∃ N : ℕ, 1 / 2 ^ N * 2 < ε := by sorry
+  obtain ⟨N, hN⟩ : ∃ N : ℕ, 1 / 2 ^ N * 2 < ε := by
+    have : Tendsto (fun n : ℕ ↦ (1 / 2 : ℝ) ^ n * 2) atTop (𝓝 0) := by
+      rw[← zero_mul (2 : ℝ)]
+      apply Tendsto.mul
+      · apply tendsto_pow_atTop_nhds_zero_of_lt_one (r := 1 / (2 : ℝ)); norm_num; norm_num
+      apply tendsto_const_nhds
+    rcases Metric.tendsto_atTop.mp this ε ε_pos with ⟨N, hN⟩
+    specialize hN N le_rfl
+    use N
+    rw [dist_zero_right] at hN
+    rw [← abs_of_nonneg  (a := 1 / 2 ^ N * 2)]
+    rw [Real.norm_eq_abs] at hN
+    rw [← one_div_pow (2 : ℝ) N]
+    apply hN
+    apply mul_nonneg; positivity; apply zero_le_two
   use N
   intro n hn
   obtain ⟨k, rfl : n = N + k⟩ := le_iff_exists_add.mp hn
   calc
-    dist (u (N + k)) (u N) = dist (u (N + 0)) (u (N + k)) := sorry
-    _ ≤ ∑ i  ∈ range k, dist (u (N + i)) (u (N + (i + 1))) := sorry
-    _ ≤ ∑ i  ∈ range k, (1 / 2 : ℝ) ^ (N + i) := sorry
-    _ = 1 / 2 ^ N * ∑ i  ∈ range k, (1 / 2 : ℝ) ^ i := sorry
-    _ ≤ 1 / 2 ^ N * 2 := sorry
-    _ < ε := sorry
-
+    dist (u (N + k)) (u N) = dist (u (N + 0)) (u (N + k)) := by apply dist_comm
+    _ ≤ ∑ i  ∈ range k, dist (u (N + i)) (u (N + (i + 1))) := by
+      let u_shift_N := fun i ↦ u (N + i)
+      apply dist_le_range_sum_dist u_shift_N
+    _ ≤ ∑ i  ∈ range k, (1 / 2 : ℝ) ^ (N + i) := by
+      gcongr with i i_in_fin_k
+      apply hu
+    _ = 1 / 2 ^ N * ∑ i  ∈ range k, (1 / 2 : ℝ) ^ i := by
+      rw [Finset.mul_sum]
+      congr with i
+      rw [pow_add]
+      rw [← one_div_pow (2 : ℝ) N]
+    _ ≤ 1 / 2 ^ N * 2 := by
+      rw [geom_sum_eq]
+      gcongr; ring_nf; simp; simp
+    _ < ε := by apply hN
 
 open Metric
 
