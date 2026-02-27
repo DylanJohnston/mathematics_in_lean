@@ -50,7 +50,15 @@ example {P : X → Prop} {x : X} (h : ∀ᶠ y in 𝓝 x, P y) : ∀ᶠ y in �
 example {α : Type*} (n : α → Filter α) (H₀ : ∀ a, pure a ≤ n a)
     (H : ∀ a : α, ∀ p : α → Prop, (∀ᶠ x in n a, p x) → ∀ᶠ y in n a, ∀ᶠ x in n y, p x) :
     ∀ a, ∀ s ∈ n a, ∃ t ∈ n a, t ⊆ s ∧ ∀ a' ∈ t, s ∈ n a' := by
-  sorry
+  intro a s s_in_na
+  use {b | s ∈ n b}
+  constructor
+  apply H; apply s_in_na
+  constructor
+  intro b b_in_b_s_in_nb
+  apply H₀; apply b_in_b_s_in_nb
+  intro a' a'_in_b_s_in_nb
+  apply a'_in_b_s_in_nb
 end
 
 variable {X Y : Type*}
